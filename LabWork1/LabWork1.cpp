@@ -4,6 +4,7 @@
 #include "stdafx.h"
 #include "QuadroMatrix.h"
 #include "Matrix.h"
+#include <emmintrin.h> 
 #include <iostream>
 using namespace std;
 
@@ -25,6 +26,23 @@ void multiply(int** mx1, int** mx2, int** mx3, int matrixSize) {
 			}
 		}
 	}
+}
+
+void multiplyVectorized(int** mx1, int** mx2, int** mx3, int matrixSize) {
+	for (int i = 0; i < 16; i*=4) {
+		*(__m128i*)&mx3[i][i] = _mm_mul_epu32(*(__m128i*)&mx1[i][i], *(__m128i*)&mx2[i][i]);
+	}
+	
+
+
+	/*for (int i = 0; i < matrixSize; i++) {
+		for (int j = 0; j < matrixSize; j++) {
+			for (int k = 0; k < matrixSize; k++) {
+				
+			}
+		}
+	}*/
+	
 }
 
 void matrixTest() {
@@ -50,8 +68,9 @@ void matrixTest() {
 
 int main()
 {
-	int bigMatrixSize = 3;
-	int smallMatrixSize = 3;
+	cout << "Sizeof int: " << sizeof(int) << endl;
+	int bigMatrixSize = 1;
+	int smallMatrixSize = 4;
 	QuadroMatrix qmx1(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx2(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx3(bigMatrixSize, smallMatrixSize);
