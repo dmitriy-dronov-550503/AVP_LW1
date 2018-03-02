@@ -50,12 +50,24 @@ public:
 private:
 	void allocate() {
 		qMatrix = (int****)malloc(bigMatrixSize * sizeof(int));
+		if (qMatrix == nullptr) {
+			throw "Memory allocation failed.";
+		}
 		for (int i = 0; i < bigMatrixSize; i++) {
 			*(qMatrix + i) = (int***)malloc(bigMatrixSize * sizeof(int));
+			if (*(qMatrix + i) == nullptr) {
+				throw "Memory allocation failed.";
+			}
 			for (int j = 0; j < bigMatrixSize; j++) {
 				*(*(qMatrix + i) + j) = (int**)malloc(smallMatrixSize * sizeof(int));
+				if (*(*(qMatrix + i) + j) == nullptr) {
+					throw "Memory allocation failed.";
+				}
 				for (int k = 0; k < smallMatrixSize; k++) {
 					*(*(*(qMatrix + i) + j) + k) = (int*)malloc(smallMatrixSize * sizeof(int));
+					if (*(*(*(qMatrix + i) + j) + k) == nullptr) {
+						throw "Memory allocation failed.";
+					}
 				}
 			}
 		}

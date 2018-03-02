@@ -80,12 +80,13 @@ void matrixTest() {
 
 int main() {
 	cout << "Sizeof int: " << sizeof(int) << endl;
-	int bigMatrixSize = 1;
-	int smallMatrixSize = 500;
+	int bigMatrixSize = 32;
+	int smallMatrixSize = 32;
 	QuadroMatrix qmx1(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx2(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx3(bigMatrixSize, smallMatrixSize, true);
 	QuadroMatrix qmx4(bigMatrixSize, smallMatrixSize, true);
+	QuadroMatrix qmx5(bigMatrixSize, smallMatrixSize, true);
 
 	cout << "QMatrix1: " << endl;
 	//qmx1.show();
@@ -95,15 +96,15 @@ int main() {
 	//qmx2.show();
 	cout << endl;
 
-	int ****qm1, ****qm2, ****qm3, ****qm4;
+	int ****qm1, ****qm2, ****qm3, ****qm4, ****qm5;
 	qm1 = qmx1.getPointer();
 	qm2 = qmx2.getPointer();
 	qm3 = qmx3.getPointer();
 	qm4 = qmx4.getPointer();
-
+	qm5 = qmx5.getPointer();
 	
-	DWORD startTime, endTime;
-	DWORD simpleMultiplyTimeTest, vectorizedMultiplyTimeTest;
+	ULONGLONG startTime, endTime;
+	ULONGLONG simpleMultiplyTimeTest, vectorizedMultiplyTimeTest;
 
 	/************************************
 	*
@@ -111,7 +112,7 @@ int main() {
 	*
 	*************************************/
 	cout << "Simple multiply: " << endl;
-	startTime = GetTickCount();
+	startTime = GetTickCount64();
 
 	for (int i = 0; i < bigMatrixSize; i++) {
 		for (int j = 0; j < bigMatrixSize; j++) {
@@ -120,7 +121,7 @@ int main() {
 	}
 
 	cout << "Result: " << endl;
-	endTime = GetTickCount();
+	endTime = GetTickCount64();
 	simpleMultiplyTimeTest = endTime - startTime;
 	cout << "Tick count: " << simpleMultiplyTimeTest << endl;
 
@@ -130,7 +131,7 @@ int main() {
 	*
 	*************************************/
 	cout << "Vectorized multiply: " << endl;
-	startTime = GetTickCount();
+	startTime = GetTickCount64();
 
 	for (int i = 0; i < bigMatrixSize; i++) {
 		for (int j = 0; j < bigMatrixSize; j++) {
@@ -139,11 +140,34 @@ int main() {
 	}
 
 	cout << "Result: " << endl;
-	endTime = GetTickCount();
+	endTime = GetTickCount64();
 	vectorizedMultiplyTimeTest = endTime - startTime;
 	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl;
-	cout << "Total speed up: x" << (double)(simpleMultiplyTimeTest / vectorizedMultiplyTimeTest) << endl;
 
+	/************************************
+	*
+	*	TEST: Vectorized over vectorized multiply
+	*
+	*************************************/
+	cout << "Vectorized multiply: " << endl;
+	startTime = GetTickCount64();
+
+
+	int*** tempResult;
+	int*** tempMx1;
+	int*** tempMx2;
+	for (int i = 0; i < bigMatrixSize; i++) {
+		tempResult = qm5[i];
+		tempMx1 = qm1[i];
+		tempMx2 = qm2[i];
+		for (int j = 0; j < bigMatrixSize; j++) {
+			multiplyVectorized(tempMx1[j], tempMx2[j], tempResult[j], smallMatrixSize);
+		}
+	}
+
+	cout << "Result: " << endl;
+	endTime = GetTickCount64();
+	cout << "Tick count: " << endTime - startTime << endl;
 
 
 	for (int i = 0; i < 100; i++) {
