@@ -13,8 +13,10 @@ public:
 	Matrix(int startGenerateNumber) {
 		fillPosition = startGenerateNumber;
 		dMatrix = (int**)malloc(matrixSize * sizeof(int));
+		if (dMatrix == nullptr) throw "Memory allocation failed.";
 		for (int i = 0; i < matrixSize; i++) {
 			*(dMatrix + i) = (int*)malloc(matrixSize * sizeof(int));
+			if (*(dMatrix + i) == nullptr) throw "Memory allocation failed.";
 		}
 		fill();
 	}

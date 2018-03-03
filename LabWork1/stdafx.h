@@ -13,6 +13,8 @@
 #include <tchar.h>
 #include <inttypes.h>
 #include <Windows.h>
+#include "emmintrin.h"
+#include "smmintrin.h"
 
 
 

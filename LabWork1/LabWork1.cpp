@@ -4,10 +4,15 @@
 #include "stdafx.h"
 #include "QuadroMatrix.h"
 #include "Matrix.h"
-#include "emmintrin.h"
-#include "smmintrin.h"
+#include "MatrixMultiply.h"
 #include <iostream>
+#include <iomanip>
 using namespace std;
+#define ENABLE_COMMON_MULTIPLY
+//#define ENABLE_VECTORIZED_MULTIPLY
+//#define ENABLE_NOT_VECTORIZED_MULTIPLY
+#define ENABLE_SSE_MULTIPLY
+
 
 void show(int** matrix, int matrixSize) {
 	for (int i = 0; i < matrixSize; i++) {
@@ -15,62 +20,6 @@ void show(int** matrix, int matrixSize) {
 			cout << matrix[i][j] << "  ";
 		}
 		cout << endl;
-	}
-}
-
-void multiply(int** mx1, int** mx2, int** mx3, int matrixSize) {
-	for (int i = 0; i < matrixSize; i++) {
-		for (int j = 0; j < matrixSize; j++) {
-			mx3[i][j] = 0;
-			for (int k = 0; k < matrixSize; k++) {
-				mx3[i][j] += mx1[i][k] * mx2[k][j];
-			}
-		}
-	}
-}
-
-void multiplyVectorized(int** mx1, int** mx2, int** mx3, int matrixSize) {
-	int *temp = nullptr;
-	int temp1 = 0;
-	int *temp2 = nullptr;
-	uint32_t size = matrixSize;
-	for (uint32_t i = 0; i < size; ++i) {
-		temp = mx3[i];
-		for (uint32_t j = 0; j < size; ++j) {
-			temp1 = mx1[i][j];
-			temp2 = mx2[j];
-			for (uint32_t k = 0; k < size; ++k)
-				temp[k] += temp1 * temp2[k];
-		}
-	}
-}
-
-void multiplyNotVectorized(int** mx1, int** mx2, int** mx3, int matrixSize) {
-	int *temp = nullptr;
-	int temp1 = 0;
-	int *temp2 = nullptr;
-	uint32_t size = matrixSize;
-	for (uint32_t i = 0; i < size; ++i) {
-		temp = mx3[i];
-		for (uint32_t j = 0; j < size; ++j) {
-			temp1 = mx1[i][j];
-			temp2 = mx2[j];
-			#pragma loop(no_vector)  
-			for (uint32_t k = 0; k < size; ++k)
-				temp[k] += temp1 * temp2[k];
-		}
-	}
-}
-
-void multiplySSE(int** mx1, int** mx2, int** mx3, int matrixSize) {
-	for (int j = 0; j < matrixSize; j++) {
-		for (int i = 0; i < matrixSize; i++) {
-			__m128i result;
-			__m128i *rmx = (__m128i*)&mx3[i][0];
-			result = _mm_set1_epi32(mx1[i][j]);	// Broadcast number from A matrix to low addresses.
-			result = _mm_mullo_epi32(result, *(__m128i*)&mx2[j][0]);	// Multiply
-			*rmx = _mm_add_epi32(result, *rmx);
-		}
 	}
 }
 
@@ -91,19 +40,20 @@ void matrixTest() {
 	show(mx2, matrixSize);
 
 	cout << "Result" << endl;
-	multiply(mx1, mx2, mx3, matrixSize);
+	MatrixMultiply::multiply(mx1, mx2, mx3, matrixSize);
 	show(mx3, matrixSize);
 }
 
 int main() {
 	cout << "Sizeof int: " << sizeof(int) << endl;
 	int bigMatrixSize = 1;
-	int smallMatrixSize = 1024;
+	int smallMatrixSize = 4;
 	QuadroMatrix qmx1(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx2(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx3(bigMatrixSize, smallMatrixSize, true);
 	QuadroMatrix qmx4(bigMatrixSize, smallMatrixSize, true);
 	QuadroMatrix qmx5(bigMatrixSize, smallMatrixSize, true);
+	QuadroMatrix qmx6(bigMatrixSize, smallMatrixSize, true);
 
 	cout << "QMatrix1: " << endl;
 	//qmx1.show();
@@ -113,73 +63,121 @@ int main() {
 	//qmx2.show();
 	cout << endl;
 
-	int ****qm1, ****qm2, ****qm3, ****qm4, ****qm5;
+	int ****qm1, ****qm2, ****qm3, ****qm4, ****qm5, ****qm6;
 	qm1 = qmx1.getPointer();
 	qm2 = qmx2.getPointer();
 	qm3 = qmx3.getPointer();
 	qm4 = qmx4.getPointer();
 	qm5 = qmx5.getPointer();
+	qm6 = qmx6.getPointer();
 	
-	DWORD startTime, endTime;
-	DWORD simpleMultiplyTimeTest, vectorizedMultiplyTimeTest;
+	ULONGLONG startTime, endTime;
+	ULONGLONG simpleMultiplyTimeTest, vectorizedMultiplyTimeTest;
 
+#ifdef ENABLE_COMMON_MULTIPLY
 	/************************************
 	*
 	*	TEST: Common multiply
 	*
 	*************************************/
 	cout << "Simple multiply: " << endl;
-	startTime = GetTickCount();
+	startTime = GetTickCount64();
 
 	for (int i = 0; i < bigMatrixSize; i++) {
 		for (int j = 0; j < bigMatrixSize; j++) {
-			multiply(qm1[i][j], qm2[i][j], qm3[i][j], smallMatrixSize);
+			MatrixMultiply::multiply(qm1[i][j], qm2[i][j], qm3[i][j], smallMatrixSize);
 		}
 	}
-
-	cout << "Result: " << endl;
-	endTime = GetTickCount();
+	endTime = GetTickCount64();
 	simpleMultiplyTimeTest = endTime - startTime;
-	cout << "Tick count: " << simpleMultiplyTimeTest << endl;
+	cout << "Tick count: " << simpleMultiplyTimeTest << endl << endl;
+	//show(qm3[0][0], smallMatrixSize);
+#endif
 
+#ifdef ENABLE_VECTORIZED_MULTIPLY
 	/************************************
 	*
 	*	TEST: Vectorized multiply
 	*
 	*************************************/
 	cout << "Vectorized multiply: " << endl;
-	startTime = GetTickCount();
+	startTime = GetTickCount64();
 
 	for (int i = 0; i < bigMatrixSize; i++) {
 		for (int j = 0; j < bigMatrixSize; j++) {
-			multiplyVectorized(qm1[i][j], qm2[i][j], qm4[i][j], smallMatrixSize);
+			MatrixMultiply::multiplyVectorized(qm1[i][j], qm2[i][j], qm4[i][j], smallMatrixSize);
 		}
 	}
 
-	cout << "Result: " << endl;
-	endTime = GetTickCount();
+	endTime = GetTickCount64();
 	vectorizedMultiplyTimeTest = endTime - startTime;
 	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl;
-	cout << "Total speed up: x" << (double)(simpleMultiplyTimeTest / vectorizedMultiplyTimeTest) << endl;
+	cout << "Total speed up: x" << setprecision(3) << (double)simpleMultiplyTimeTest / (double)vectorizedMultiplyTimeTest << endl << endl;
+#endif
 
+#ifdef ENABLE_NOT_VECTORIZED_MULTIPLY
 	/************************************
 	*
 	*	TEST: Not vectorized multiply
 	*
 	*************************************/
-	cout << "Vectorized multiply: " << endl;
-	startTime = GetTickCount();
+	cout << "Not vectorized multiply: " << endl;
+	startTime = GetTickCount64();
 
 	for (int i = 0; i < bigMatrixSize; i++) {
 		for (int j = 0; j < bigMatrixSize; j++) {
-			multiplyNotVectorized(qm1[i][j], qm2[i][j], qm4[i][j], smallMatrixSize);
+			MatrixMultiply::multiplyNotVectorized(qm1[i][j], qm2[i][j], qm5[i][j], smallMatrixSize);
 		}
 	}
 
-	cout << "Result: " << endl;
-	endTime = GetTickCount();
+	endTime = GetTickCount64();
 	vectorizedMultiplyTimeTest = endTime - startTime;
-	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl;
+	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl << endl;
+#endif
+
+#ifdef ENABLE_SSE_MULTIPLY
+	/************************************
+	*
+	*	TEST: SSE multiply
+	*
+	*************************************/
+	cout << "Not vectorized multiply: " << endl;
+	startTime = GetTickCount64();
+
+	for (int i = 0; i < bigMatrixSize; i++) {
+		for (int j = 0; j < bigMatrixSize; j++) {
+			MatrixMultiply::multiplySSE(qm1[i][j], qm2[i][j], qm6[i][j], smallMatrixSize);
+		}
+	}
+
+	endTime = GetTickCount64();
+	vectorizedMultiplyTimeTest = endTime - startTime;
+	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl << endl;
+	//show(qm6[0][0], smallMatrixSize);
+#endif
+
+	// Right caclculaions control
+#ifdef ENABLE_VECTORIZED_MULTIPLY
+	for (int i = 0; i < bigMatrixSize; i++) {
+		for (int j = 0; j < bigMatrixSize; j++) {
+			MatrixMultiply::compare(qm3[i][j], qm4[i][j], smallMatrixSize);
+		}
+	}
+#endif
+#ifdef ENABLE_NOT_VECTORIZED_MULTIPLY
+	for (int i = 0; i < bigMatrixSize; i++) {
+		for (int j = 0; j < bigMatrixSize; j++) {
+			MatrixMultiply::compare(qm3[i][j], qm5[i][j], smallMatrixSize);
+		}
+	}
+#endif
+#ifdef ENABLE_SSE_MULTIPLY
+	for (int i = 0; i < bigMatrixSize; i++) {
+		for (int j = 0; j < bigMatrixSize; j++) {
+			MatrixMultiply::compare(qm3[i][j], qm6[i][j], smallMatrixSize);
+		}
+	}
+#endif
 
 	system("pause");
     return 0;
