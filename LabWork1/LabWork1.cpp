@@ -45,6 +45,23 @@ void multiplyVectorized(int** mx1, int** mx2, int** mx3, int matrixSize) {
 	}
 }
 
+void multiplyNotVectorized(int** mx1, int** mx2, int** mx3, int matrixSize) {
+	int *temp = nullptr;
+	int temp1 = 0;
+	int *temp2 = nullptr;
+	uint32_t size = matrixSize;
+	for (uint32_t i = 0; i < size; ++i) {
+		temp = mx3[i];
+		for (uint32_t j = 0; j < size; ++j) {
+			temp1 = mx1[i][j];
+			temp2 = mx2[j];
+			#pragma loop(no_vector)  
+			for (uint32_t k = 0; k < size; ++k)
+				temp[k] += temp1 * temp2[k];
+		}
+	}
+}
+
 void multiplySSE(int** mx1, int** mx2, int** mx3, int matrixSize) {
 	for (int j = 0; j < matrixSize; j++) {
 		for (int i = 0; i < matrixSize; i++) {
@@ -81,11 +98,12 @@ void matrixTest() {
 int main() {
 	cout << "Sizeof int: " << sizeof(int) << endl;
 	int bigMatrixSize = 1;
-	int smallMatrixSize = 500;
+	int smallMatrixSize = 1024;
 	QuadroMatrix qmx1(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx2(bigMatrixSize, smallMatrixSize);
 	QuadroMatrix qmx3(bigMatrixSize, smallMatrixSize, true);
 	QuadroMatrix qmx4(bigMatrixSize, smallMatrixSize, true);
+	QuadroMatrix qmx5(bigMatrixSize, smallMatrixSize, true);
 
 	cout << "QMatrix1: " << endl;
 	//qmx1.show();
@@ -95,12 +113,12 @@ int main() {
 	//qmx2.show();
 	cout << endl;
 
-	int ****qm1, ****qm2, ****qm3, ****qm4;
+	int ****qm1, ****qm2, ****qm3, ****qm4, ****qm5;
 	qm1 = qmx1.getPointer();
 	qm2 = qmx2.getPointer();
 	qm3 = qmx3.getPointer();
 	qm4 = qmx4.getPointer();
-
+	qm5 = qmx5.getPointer();
 	
 	DWORD startTime, endTime;
 	DWORD simpleMultiplyTimeTest, vectorizedMultiplyTimeTest;
@@ -144,16 +162,25 @@ int main() {
 	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl;
 	cout << "Total speed up: x" << (double)(simpleMultiplyTimeTest / vectorizedMultiplyTimeTest) << endl;
 
+	/************************************
+	*
+	*	TEST: Not vectorized multiply
+	*
+	*************************************/
+	cout << "Vectorized multiply: " << endl;
+	startTime = GetTickCount();
 
-
-	for (int i = 0; i < 100; i++) {
-		i = i + 1;
-		i--;
+	for (int i = 0; i < bigMatrixSize; i++) {
+		for (int j = 0; j < bigMatrixSize; j++) {
+			multiplyNotVectorized(qm1[i][j], qm2[i][j], qm4[i][j], smallMatrixSize);
+		}
 	}
 
-	
+	cout << "Result: " << endl;
+	endTime = GetTickCount();
+	vectorizedMultiplyTimeTest = endTime - startTime;
+	cout << "Tick count: " << vectorizedMultiplyTimeTest << endl;
 
 	system("pause");
     return 0;
 }
-

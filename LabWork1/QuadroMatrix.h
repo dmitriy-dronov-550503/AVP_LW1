@@ -50,12 +50,24 @@ public:
 private:
 	void allocate() {
 		qMatrix = (int****)malloc(bigMatrixSize * sizeof(int));
+		if (qMatrix == nullptr) {
+			throw "Memory allocation failed.\n";
+		}
 		for (int i = 0; i < bigMatrixSize; i++) {
 			*(qMatrix + i) = (int***)malloc(bigMatrixSize * sizeof(int));
+			if (*(qMatrix + i) == nullptr) {
+				throw "Memory allocation failed.\n";
+			}
 			for (int j = 0; j < bigMatrixSize; j++) {
 				*(*(qMatrix + i) + j) = (int**)malloc(smallMatrixSize * sizeof(int));
+				if (*(*(qMatrix + i) + j) == nullptr) {
+					throw "Memory allocation failed.\n";
+				}
 				for (int k = 0; k < smallMatrixSize; k++) {
 					*(*(*(qMatrix + i) + j) + k) = (int*)malloc(smallMatrixSize * sizeof(int));
+					if (*(*(*(qMatrix + i) + j) + k) == nullptr) {
+						throw "Memory allocation failed.\n";
+					}				
 				}
 			}
 		}
@@ -65,11 +77,21 @@ private:
 		for (int i = 0; i < bigMatrixSize; i++) {
 			for (int j = 0; j < bigMatrixSize; j++) {
 				for (int k = 0; k < smallMatrixSize; k++) {
-					for (int l = 0; l < smallMatrixSize; l++) {
-						*(*(*(*(qMatrix + i) + j) + k) + l) = clear?0:l + k * smallMatrixSize + j * bigMatrixSize*smallMatrixSize + i * bigMatrixSize*smallMatrixSize*smallMatrixSize;
+					if (clear) {
+						for (int l = 0; l < smallMatrixSize; l++) {
+							*(*(*(*(qMatrix + i) + j) + k) + l) = 0;
+						}
 					}
+					else {
+						for (int l = 0; l < smallMatrixSize; l++) {
+							*(*(*(*(qMatrix + i) + j) + k) + l) = l + k * smallMatrixSize + j * bigMatrixSize*smallMatrixSize + i * bigMatrixSize*smallMatrixSize*smallMatrixSize;
+						}
+					}
+					
 				}
 			}
 		}
 	}
+
+	
 };
