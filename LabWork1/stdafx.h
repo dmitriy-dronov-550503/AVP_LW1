@@ -15,7 +15,9 @@
 #include <Windows.h>
 #include "emmintrin.h"
 #include "smmintrin.h"
-
+#include "immintrin.h"
+#include <iostream>
+using namespace std;
 
 
 // TODO: Установите здесь ссылки на дополнительные заголовки, требующиеся для программы

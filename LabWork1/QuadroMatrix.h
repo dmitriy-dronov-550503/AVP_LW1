@@ -1,7 +1,5 @@
 #pragma once
 #include "stdafx.h"
-#include <iostream>
-using namespace std;
 
 class QuadroMatrix {
 public:
@@ -32,6 +30,10 @@ public:
 				}
 			}
 		}
+	}
+
+	void clear() {
+		fill(true);
 	}
 
 	~QuadroMatrix() {
